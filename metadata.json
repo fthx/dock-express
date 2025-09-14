@@ -1,0 +1,13 @@
+{
+  "description": "Turn the native GNOME dash into a dock.\n\n Toggle the dash visibility at the bottom.\n\n Very short code (less than 200 lines), very light extension.",
+  "name": "Dock Express",
+  "shell-version": [
+    "46",
+    "47",
+    "48",
+    "49"
+  ],
+  "url": "https://github.com/fthx/dock-express",
+  "uuid": "dock-express@fthx",
+  "version": 999
+}
