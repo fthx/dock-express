@@ -1,5 +1,5 @@
 {
-  "description": "Turn the native GNOME dash into a dock.\n\n Toggle the dash visibility at the bottom.\n\n Very short code (less than 200 lines), very light extension.",
+  "description": "Turn the native GNOME dash into a dock.\n\n Toggle the dash visibility at the bottom. It does not autohide, maybe in the future. There is no multi-monitor support: the GNOME dash opens apps in the primary monitor so this dock too.\n\n Very short code (less than 200 lines), very light extension.",
   "name": "Dock Express",
   "shell-version": [
     "46",
