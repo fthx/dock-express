@@ -260,9 +260,8 @@ export default class DockExpressExtension extends Extension {
 
     disable() {
         global.display.disconnectObject(this);
-        Main.overview.disconnectObject(this);
-
         Main.layoutManager.disconnectObject(this);
+
         Main.layoutManager._updateHotCorners();
 
         this._dockAutohideButton.destroy();
