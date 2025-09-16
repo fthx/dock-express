@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<schemalist>
+    <schema path="/org/gnome/shell/extensions/dock-express/" id="org.gnome.shell.extensions.dock-express">
+
+    <key type="b" name="dock-autohide">
+        <default>true</default>
+        <summary>Autohide the dock</summary>
+    </key>
+
+    </schema>
+</schemalist>
