@@ -143,8 +143,8 @@ const BottomDock = GObject.registerClass(
                 let workArea = Main.layoutManager.getWorkAreaForMonitor(Main.layoutManager.primaryIndex);
 
                 if (workArea) {
-                    let x = workArea.x + (workArea.width - this._dash.width) / 2;
-                    let y = workArea.y + workArea.height - this._dash.height;
+                    let x = Math.round(workArea.x + (workArea.width - this._dash.width) / 2);
+                    let y = Math.round(workArea.y + workArea.height - this._dash.height);
                     this._dash.set_position(x, y);
 
                     this._dash.show();
