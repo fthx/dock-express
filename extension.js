@@ -108,6 +108,7 @@ const BottomDock = GObject.registerClass(
                 'notify::hover', this._onDashHover.bind(this),
                 this);
 
+            this._keepDashShown = false;
             this._originalItemMenuChanged = this._dash._itemMenuStateChanged;
             this._dash._itemMenuStateChanged = (item, opened) => {
                 if (opened) {
@@ -131,7 +132,7 @@ const BottomDock = GObject.registerClass(
 
             if (Main.overview._overview._controls.get_children().includes(this._dash)) {
                 Main.overview._overview._controls.remove_child(this._dash);
-                Main.layoutManager.addTopChrome(this._dash, { affectsStruts: false });
+                Main.layoutManager.addTopChrome(this._dash, { affectsStruts: false, trackFullscreen: true });
             }
         }
 
@@ -225,6 +226,8 @@ const BottomDock = GObject.registerClass(
 
 export default class DockExpressExtension extends Extension {
     _updateHotEdge() {
+        Main.overview.show();
+
         let monitor = Main.layoutManager.primaryMonitor;
         let leftX = monitor.x;
         let bottomY = monitor.y + monitor.height;
@@ -246,7 +249,6 @@ export default class DockExpressExtension extends Extension {
         Main.panel.addToStatusArea('dock-express-button', this._dockAutohideButton);
 
         Main.layoutManager.connectObject('hot-corners-changed', this._updateHotEdge.bind(this), this);
-        global.display.connectObject('workareas-changed', () => Main.overview.show(), this);
     }
 
     enable() {
@@ -259,7 +261,6 @@ export default class DockExpressExtension extends Extension {
     }
 
     disable() {
-        global.display.disconnectObject(this);
         Main.layoutManager.disconnectObject(this);
 
         Main.layoutManager._updateHotCorners();
