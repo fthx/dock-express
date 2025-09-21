@@ -132,7 +132,9 @@ const BottomDock = GObject.registerClass(
 
             if (Main.overview._overview._controls.get_children().includes(this._dash)) {
                 Main.overview._overview._controls.remove_child(this._dash);
-                Main.layoutManager.addTopChrome(this._dash, { affectsStruts: false, trackFullscreen: true });
+                Main.layoutManager.addTopChrome(this._dash, {
+                    affectsInputRegion: true, affectsStruts: false, trackFullscreen: true
+                });
             }
         }
 
@@ -189,7 +191,7 @@ const BottomDock = GObject.registerClass(
                     });
                 else
                     this._dash.ease({
-                        duration: ANIMATION_DURATION,
+                        duration: ANIMATION_DURATION * 4,
                         opacity: DASH_NOT_HOVER_OPACITY,
                         mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                     });
@@ -262,14 +264,12 @@ export default class DockExpressExtension extends Extension {
 
     disable() {
         Main.layoutManager.disconnectObject(this);
-
         Main.layoutManager._updateHotCorners();
 
         this._dockAutohideButton.destroy();
         this._dockAutohideButton = null;
 
         this._edge = null;
-
         this._settings = null;
     }
 }
