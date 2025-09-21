@@ -77,8 +77,6 @@ const BottomDock = GObject.registerClass(
                 'showing', this._raiseDash.bind(this),
                 'hidden', this._onOverviewHidden.bind(this),
                 this);
-
-            this.connectObject('destroy', this._destroy.bind(this), this);
         }
 
         setBarrierSize(size) {
@@ -212,7 +210,7 @@ const BottomDock = GObject.registerClass(
             return Clutter.EVENT_PROPAGATE;
         }
 
-        _destroy() {
+        destroy() {
             Main.overview.disconnectObject(this);
 
             this._dash?._dashContainer?.disconnectObject(this);
@@ -232,7 +230,7 @@ const BottomDock = GObject.registerClass(
             this._pressureBarrier?.destroy();
             this._pressureBarrier = null;
 
-            this.destroy();
+            super.destroy();
         }
     });
 
