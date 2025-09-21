@@ -74,8 +74,8 @@ const BottomDock = GObject.registerClass(
             this._pressureBarrier?.connectObject('trigger', this._toggleDash.bind(this), this);
 
             Main.overview.connectObject(
-                'shown', () => this._toggleDash(),
-                'hidden', () => this._onDashHover(),
+                'showing', this._raiseDash.bind(this),
+                'hidden', this._onOverviewHidden.bind(this),
                 this);
 
             this.connectObject('destroy', this._destroy.bind(this), this);
@@ -138,6 +138,32 @@ const BottomDock = GObject.registerClass(
             }
         }
 
+        _raiseDash() {
+            this._dash.show();
+            this._dash.ease({
+                duration: ANIMATION_DURATION,
+                opacity: 255,
+                mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            });
+        }
+
+        _hideDash() {
+            this._dash.ease({
+                duration: ANIMATION_DURATION * 4,
+                opacity: 0,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                onComplete: () => this._dash.hide(),
+            });
+        }
+
+        _dimDash() {
+            this._dash.ease({
+                duration: ANIMATION_DURATION * 4,
+                opacity: DASH_NOT_HOVER_OPACITY,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            });
+        }
+
         _toggleDash() {
             if (this._monitor.inFullscreen || (global.get_pointer()[2] & Clutter.ModifierType.BUTTON1_MASK))
                 return;
@@ -150,22 +176,20 @@ const BottomDock = GObject.registerClass(
                     let y = Math.round(workArea.y + workArea.height - this._dash.height);
                     this._dash.set_position(x, y);
 
-                    this._dash.show();
-                    this._dash.ease({
-                        duration: ANIMATION_DURATION,
-                        opacity: 255,
-                        mode: Clutter.AnimationMode.EASE_IN_QUAD,
-                    });
+                    this._raiseDash();
                 }
             } else {
-                if (!this._settings.get_boolean('dock-autohide') && !Main.overview.visible) {
-                    this._dash.ease({
-                        duration: ANIMATION_DURATION,
-                        opacity: 0,
-                        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                        onComplete: () => this._dash.hide(),
-                    });
-                }
+                if (!this._settings.get_boolean('dock-autohide') && !Main.overview.visible)
+                    this._hideDash();
+            }
+        }
+
+        _onOverviewHidden() {
+            if (this._settings.get_boolean('dock-autohide'))
+                this._hideDash();
+            else {
+                if (!this._dash._dashContainer.hover)
+                    this._dimDash();
             }
         }
 
@@ -174,27 +198,13 @@ const BottomDock = GObject.registerClass(
                 return;
 
             if (this._settings.get_boolean('dock-autohide')) {
-                if (!this._dash._dashContainer.hover && !this._keepDashShown) {
-                    this._dash.ease({
-                        duration: ANIMATION_DURATION * 4,
-                        opacity: 0,
-                        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                        onComplete: () => this._dash.hide(),
-                    });
-                }
+                if (!this._dash._dashContainer.hover && !this._keepDashShown)
+                    this._hideDash();
             } else {
                 if (this._dash._dashContainer.hover)
-                    this._dash.ease({
-                        duration: ANIMATION_DURATION,
-                        opacity: 255,
-                        mode: Clutter.AnimationMode.EASE_IN_QUAD,
-                    });
+                    this._raiseDash();
                 else
-                    this._dash.ease({
-                        duration: ANIMATION_DURATION * 4,
-                        opacity: DASH_NOT_HOVER_OPACITY,
-                        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                    });
+                    this._dimDash();
             }
         }
 
@@ -222,7 +232,7 @@ const BottomDock = GObject.registerClass(
             this._pressureBarrier?.destroy();
             this._pressureBarrier = null;
 
-            super.destroy();
+            this.destroy();
         }
     });
 
@@ -263,13 +273,14 @@ export default class DockExpressExtension extends Extension {
     }
 
     disable() {
-        Main.layoutManager.disconnectObject(this);
-        Main.layoutManager._updateHotCorners();
-
         this._dockAutohideButton.destroy();
         this._dockAutohideButton = null;
 
+        Main.layoutManager.disconnectObject(this);
+        Main.layoutManager._destroyHotCorners();
+        Main.layoutManager._updateHotCorners();
         this._edge = null;
+
         this._settings = null;
     }
 }
