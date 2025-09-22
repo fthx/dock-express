@@ -5,6 +5,7 @@
 
 
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
@@ -114,7 +115,6 @@ const BottomDock = GObject.registerClass(
                         GLib.source_remove(this._showLabelTimeoutId);
                         this._showLabelTimeoutId = 0;
                     }
-
                     item.hideLabel();
 
                     this._keepDashShown = true;
@@ -137,6 +137,13 @@ const BottomDock = GObject.registerClass(
         }
 
         _raiseDash() {
+            let workArea = Main.layoutManager.getWorkAreaForMonitor(Main.layoutManager.primaryIndex);
+            if (workArea) {
+                let x = Math.round(workArea.x + (workArea.width - this._dash.width) / 2);
+                let y = Math.round(workArea.y + workArea.height - this._dash.height);
+                this._dash.set_position(x, y);
+            }
+
             this._dash.show();
             this._dash.ease({
                 duration: ANIMATION_DURATION,
@@ -166,17 +173,9 @@ const BottomDock = GObject.registerClass(
             if (this._monitor.inFullscreen || (global.get_pointer()[2] & Clutter.ModifierType.BUTTON1_MASK))
                 return;
 
-            if (!this._dash.visible) {
-                let workArea = Main.layoutManager.getWorkAreaForMonitor(Main.layoutManager.primaryIndex);
-
-                if (workArea) {
-                    let x = Math.round(workArea.x + (workArea.width - this._dash.width) / 2);
-                    let y = Math.round(workArea.y + workArea.height - this._dash.height);
-                    this._dash.set_position(x, y);
-
-                    this._raiseDash();
-                }
-            } else {
+            if (!this._dash.visible)
+                this._raiseDash();
+            else {
                 if (!this._settings.get_boolean('dock-autohide') && !Main.overview.visible)
                     this._hideDash();
             }
@@ -238,18 +237,23 @@ export default class DockExpressExtension extends Extension {
     _updateHotEdge() {
         Main.overview.show();
 
-        let monitor = Main.layoutManager.primaryMonitor;
-        let leftX = monitor.x;
-        let bottomY = monitor.y + monitor.height;
-        let size = monitor.width;
+        this._timeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            Main.overview.hide();
 
-        this._edge = new BottomDock(this._settings, monitor, leftX, bottomY);
+            let monitor = Main.layoutManager.primaryMonitor;
+            let leftX = monitor.x;
+            let bottomY = monitor.y + monitor.height;
+            let size = monitor.width;
 
-        this._edge._dash.hide();
-        this._edge._toggleDash();
+            this._edge = new BottomDock(this._settings, monitor, leftX, bottomY);
+            this._edge._raiseDash();
 
-        this._edge.setBarrierSize(size);
-        Main.layoutManager.hotCorners.push(this._edge);
+            this._edge.setBarrierSize(size);
+            Main.layoutManager.hotCorners.push(this._edge);
+
+            this._timeout = null;
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _initDock() {
@@ -277,8 +281,12 @@ export default class DockExpressExtension extends Extension {
         Main.layoutManager.disconnectObject(this);
         Main.layoutManager._destroyHotCorners();
         Main.layoutManager._updateHotCorners();
-        this._edge = null;
 
+        this._edge = null;
+        if (this._timeout) {
+            GLib.Source.remove(this._timeout);
+            this._timeout = null;
+        }
         this._settings = null;
     }
 }
