@@ -243,6 +243,9 @@ export default class DockExpressExtension extends Extension {
     _updateHotEdge() {
         Main.overview.show();
 
+        if (this._timeout)
+            GLib.Source.remove(this._timeout);
+
         this._timeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             Main.overview.hide();
 
