@@ -8,5 +8,10 @@
         <summary>Autohide the dock</summary>
     </key>
 
+    <key type="b" name="panel-hide">
+        <default>true</default>
+        <summary>Hide the panel</summary>
+    </key>
+
     </schema>
 </schemalist>

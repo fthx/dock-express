@@ -23,6 +23,7 @@ const PRESSURE_THRESHOLD = 100; // > 0
 const EDGE_SIZE = 100; // %
 const ANIMATION_DURATION = 150; // ms
 const DASH_NOT_HOVER_OPACITY = 128; // 0...255
+const ICON_INACTIVE_OPACITY = 128; //0...255
 
 const DockAutohideButton = GObject.registerClass(
     class DockAutohideButton extends PanelMenu.Button {
@@ -31,7 +32,7 @@ const DockAutohideButton = GObject.registerClass(
 
             this._settings = settings;
 
-            this._icon = new St.Icon({ style_class: 'system-status-icon' });
+            this._icon = new St.Icon({ style_class: 'system-status-icon', icon_name: 'pan-down-symbolic' });
             this._updateIcon();
             this.add_child(this._icon);
 
@@ -40,14 +41,74 @@ const DockAutohideButton = GObject.registerClass(
 
         _updateIcon() {
             if (this._settings.get_boolean('dock-autohide'))
-                this._icon.icon_name = 'changes-allow-symbolic';
+                this._icon.opacity = ICON_INACTIVE_OPACITY;
             else
-                this._icon.icon_name = 'changes-prevent-symbolic';
+                this._icon.opacity = 255;
         }
 
         _onClicked() {
             this._settings.set_boolean('dock-autohide', !this._settings.get_boolean('dock-autohide'));
             this._updateIcon();
+        }
+    });
+
+const PanelHideButton = GObject.registerClass(
+    class PanelHideButton extends PanelMenu.Button {
+        _init(settings) {
+            super._init();
+
+            this._settings = settings;
+
+            this._icon = new St.Icon({ style_class: 'system-status-icon', icon_name: 'pan-up-symbolic' });
+            this._updateIcon();
+            this.add_child(this._icon);
+
+            this.connectObject('button-press-event', this._onClicked.bind(this), this);
+        }
+
+        _updateIcon() {
+            if (this._settings.get_boolean('panel-hide'))
+                this._icon.opacity = ICON_INACTIVE_OPACITY;
+            else
+                this._icon.opacity = 255;
+        }
+
+        _onClicked() {
+            this._settings.set_boolean('panel-hide', !this._settings.get_boolean('panel-hide'));
+
+            this._updateIcon();
+            this._togglePanel();
+        }
+
+        _showPanel() {
+            if (Main.layoutManager.overviewGroup.get_children().includes(Main.layoutManager.panelBox))
+                Main.layoutManager.overviewGroup.remove_child(Main.layoutManager.panelBox);
+            if (Main.layoutManager.panelBox.get_parent() != Main.layoutManager.uiGroup)
+                Main.layoutManager.addChrome(Main.layoutManager.panelBox, { affectsStruts: true, trackFullscreen: false });
+
+            Main.overview.searchEntry.get_parent().set_style('margin-top: 0px;');
+        }
+
+        _hidePanel() {
+            if (Main.layoutManager.panelBox.get_parent() == Main.layoutManager.uiGroup)
+                Main.layoutManager.removeChrome(Main.layoutManager.panelBox);
+            if (!Main.layoutManager.overviewGroup.get_children().includes(Main.layoutManager.panelBox))
+                Main.layoutManager.overviewGroup.insert_child_at_index(Main.layoutManager.panelBox, 0);
+
+            Main.overview.searchEntry.get_parent().set_style('margin-top: 32px;');
+        }
+
+        _togglePanel() {
+            if (this._settings.get_boolean('panel-hide'))
+                this._hidePanel();
+            else
+                this._showPanel();
+        }
+
+        destroy() {
+            this._showPanel();
+
+            super.destroy();
         }
     });
 
@@ -135,7 +196,25 @@ const BottomDock = GObject.registerClass(
             }
         }
 
+        _enableUnredirect() {
+            if (this._originalEnableUnredirect) {
+                global.compositor.enable_unredirect = this._originalEnableUnredirect;
+                global.compositor.enable_unredirect();
+                this._originalEnableUnredirect = null;
+            }
+        }
+
+        _disableUnredirect() {
+            if (this._settings.get_boolean('panel-hide')) {
+                this._originalEnableUnredirect = global.compositor.enable_unredirect;
+                global.compositor.enable_unredirect = () => { };
+                global.compositor.disable_unredirect();
+            }
+        }
+
         _raiseDash() {
+            this._disableUnredirect();
+
             let workArea = Main.layoutManager.getWorkAreaForMonitor(Main.layoutManager.primaryIndex);
             if (workArea) {
                 let x = Math.round(workArea.x + (workArea.width - this._dash.width) / 2);
@@ -158,6 +237,8 @@ const BottomDock = GObject.registerClass(
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                 onComplete: () => this._dash.hide(),
             });
+
+            this._enableUnredirect();
         }
 
         _dimDash() {
@@ -235,6 +316,8 @@ const BottomDock = GObject.registerClass(
             this._pressureBarrier?.destroy();
             this._pressureBarrier = null;
 
+            this._enableUnredirect();
+
             super.destroy();
         }
     });
@@ -271,6 +354,10 @@ export default class DockExpressExtension extends Extension {
         this._dockAutohideButton = new DockAutohideButton(this._settings);
         Main.panel.addToStatusArea('dock-express-button', this._dockAutohideButton);
 
+        this._panelHideButton = new PanelHideButton(this._settings);
+        Main.panel.addToStatusArea('dock-express-panel', this._panelHideButton);
+        this._panelHideButton._togglePanel();
+
         Main.layoutManager.connectObject('hot-corners-changed', this._updateHotEdge.bind(this), this);
     }
 
@@ -286,6 +373,9 @@ export default class DockExpressExtension extends Extension {
     disable() {
         this._dockAutohideButton.destroy();
         this._dockAutohideButton = null;
+
+        this._panelHideButton.destroy();
+        this._panelHideButton = null;
 
         Main.layoutManager.disconnectObject(this);
         Main.layoutManager._destroyHotCorners();
