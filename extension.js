@@ -186,7 +186,7 @@ const BottomDock = GObject.registerClass(
             this._dash._dashContainer.track_hover = true;
             this._dash._dashContainer.reactive = true;
 
-            this._dash.showAppsButton.connectObject('notify::checked', this._onShowAppsButtonChecked.bind(this), this);
+            this._dash.showAppsButton.connectObject('notify::checked', () => Main.overview.showApps(), this);
 
             if (Main.overview._overview._controls.get_children().includes(this._dash)) {
                 Main.overview._overview._controls.remove_child(this._dash);
@@ -259,13 +259,6 @@ const BottomDock = GObject.registerClass(
                 if (!this._settings.get_boolean('dock-autohide') && !Main.overview.visible)
                     this._hideDash();
             }
-        }
-
-        _onShowAppsButtonChecked() {
-            if (Main.overview.visible)
-                Main.overview.hide();
-            else
-                Main.overview.showApps();
         }
 
         _onOverviewHidden() {
