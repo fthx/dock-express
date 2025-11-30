@@ -8,9 +8,19 @@
         <summary>Autohide the dock</summary>
     </key>
 
-    <key type="b" name="panel-hide">
-        <default>true</default>
-        <summary>Hide the panel</summary>
+    <key type="i" name="pressure-treshold">
+        <default>100</default>
+        <summary>Pressure treshold</summary>
+    </key>
+
+    <key type="i" name="animation-duration">
+        <default>150</default>
+        <summary>Animation duration</summary>
+    </key>
+
+    <key type="i" name="dimmed-opacity">
+        <default>50</default>
+        <summary>Dock dimmed opacity</summary>
     </key>
 
     </schema>
