@@ -66,6 +66,6 @@ export default class DockExpressPreferences extends ExtensionPreferences {
             adjustment: adjustmentOpacity,
         });
         groupGlobal.add(dimmedOpacity);
-        window._settings.bind('animation-duration', dimmedOpacity, 'value', Gio.SettingsBindFlags.DEFAULT);
+        window._settings.bind('dimmed-opacity', dimmedOpacity, 'value', Gio.SettingsBindFlags.DEFAULT);
     }
 }
