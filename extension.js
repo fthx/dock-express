@@ -17,32 +17,21 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 
 const HOT_EDGE_PRESSURE_TIMEOUT = 500; // ms
-const EDGE_SIZE = 100; // %
 
 const BottomDock = GObject.registerClass(
     class BottomDock extends Clutter.Actor {
-        _init(settings, monitor, x, y) {
+        _init(settings, monitor) {
             super._init();
 
             this._settings = settings;
-            this._pressureThreshold = this._settings?.get_int('pressure-treshold');
             this._animationDuration = this._settings?.get_int('animation-duration');
             this._dimmedOpacity = Math.round(this._settings?.get_int('dimmed-opacity') / 100 * 255);
 
             this._initDash();
+            this._initPressureBarrier();
+            this._setHotEdge();
 
-            this._monitor = monitor;
-            this._x = x;
-            this._y = y;
-
-            this._edgeSize = EDGE_SIZE / 100;
-
-            this._pressureBarrier = new Layout.PressureBarrier(
-                this._pressureThreshold,
-                HOT_EDGE_PRESSURE_TIMEOUT,
-                Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW);
-
-            this._pressureBarrier?.connectObject('trigger', () => this._toggleDash(), this);
+            Main.layoutManager.connectObject('hot-corners-changed', () => this._setHotEdge(), this);
 
             Main.overview.connectObject(
                 'showing', () => this._raiseDash(),
@@ -50,28 +39,73 @@ const BottomDock = GObject.registerClass(
                 this);
         }
 
-        setBarrierSize(size) {
+        _initPressureBarrier() {
+            this._pressureBarrier = new Layout.PressureBarrier(
+                this._settings?.get_int('pressure-treshold'),
+                HOT_EDGE_PRESSURE_TIMEOUT,
+                Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW);
+
+            this._pressureBarrier.connectObject('trigger', () => this._toggleDash(), this);
+        }
+
+        _setBarrier() {
+            this._monitor = Main.layoutManager.primaryMonitor;
+            if (!this._monitor)
+                return;
+
+            this._x = this._monitor.x;
+            this._y = this._monitor.y + this._monitor.height;
+
+            this._destroyBarrier();
+
+            this._barrier = new Meta.Barrier({
+                backend: global.backend,
+                x1: this._x,
+                y1: this._y,
+                x2: this._x + this._monitor.width,
+                y2: this._y,
+                directions: Meta.BarrierDirection.NEGATIVE_Y
+            });
+
+            this._pressureBarrier.addBarrier(this._barrier);
+        }
+
+        _setHotEdge() {
+            Main.overview.show();
+
+            if (this._timeout)
+                GLib.Source.remove(this._timeout);
+
+            this._timeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                Main.overview.hide();
+
+                this._setBarrier();
+                this._raiseDash();
+
+                this._timeout = null;
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+
+        _destroyBarrier() {
             if (this._barrier) {
                 this._pressureBarrier?.removeBarrier(this._barrier);
                 this._barrier.destroy();
                 this._barrier = null;
             }
+        }
 
-            if (size > 0) {
-                size = this._monitor?.width * this._edgeSize;
-                let x_offset = (this._monitor?.width - size) / 2;
-                this._barrier = new Meta.Barrier({
-                    backend: global.backend,
-                    x1: this._x + x_offset, x2: this._x + x_offset + size,
-                    y1: this._y, y2: this._y,
-                    directions: Meta.BarrierDirection.NEGATIVE_Y
-                });
-                this._pressureBarrier?.addBarrier(this._barrier);
-            }
+        _destroyPressureBarrier() {
+            this._destroyBarrier();
+
+            this._pressureBarrier?.disconnectObject(this);
+            this._pressureBarrier?.destroy();
+            this._pressureBarrier = null;
         }
 
         _initDash() {
             this._dash = Main.overview.dash;
+
             this._dash._dashContainer.connectObject(
                 'scroll-event', (actor, event) => Main.wm.handleWorkspaceScroll(event),
                 'notify::hover', () => this._onDashHover(),
@@ -174,19 +208,7 @@ const BottomDock = GObject.registerClass(
             }
         }
 
-        vfunc_leave_event(event) {
-            return Clutter.EVENT_PROPAGATE;
-        }
-
-        destroy() {
-            this.setBarrierSize(0);
-
-            this._pressureBarrier?.disconnectObject(this);
-            this._pressureBarrier?.destroy();
-            this._pressureBarrier = null;
-
-            Main.overview.disconnectObject(this);
-
+        _restoreDash() {
             if (this._dash) {
                 this._dash.show();
                 this._dash.opacity = 255;
@@ -203,9 +225,18 @@ const BottomDock = GObject.registerClass(
                     Main.layoutManager.removeChrome(this._dash);
                     Main.overview._overview._controls.add_child(this._dash);
                 }
-
-                this._dash = null;
             }
+        }
+
+        vfunc_leave_event(event) {
+            return Clutter.EVENT_PROPAGATE;
+        }
+
+        destroy() {
+            Main.overview.disconnectObject(this);
+
+            this._destroyPressureBarrier();
+            this._restoreDash();
 
             super.destroy();
         }
@@ -216,39 +247,11 @@ export default class DockExpressExtension extends Extension {
         super(metadata);
     }
 
-    _updateHotEdge() {
-        this._dock?.destroy();
-        this._dock = null;
-
-        Main.overview.show();
-
-        if (this._timeout)
-            GLib.Source.remove(this._timeout);
-
-        this._timeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            Main.overview.hide();
-
-            const monitor = Main.layoutManager.primaryMonitor;
-            if (monitor) {
-                const leftX = monitor.x;
-                const bottomY = monitor.y + monitor.height;
-                const size = monitor.width;
-
-                this._dock = new BottomDock(this._settings, monitor, leftX, bottomY);
-                this._dock._raiseDash();
-
-                this._dock.setBarrierSize(size);
-                Main.layoutManager.hotCorners.push(this._dock);
-            }
-
-            this._timeout = null;
-            return GLib.SOURCE_REMOVE;
-        });
-    }
-
     _initDock() {
-        this._updateHotEdge();
-        Main.layoutManager.connectObject('hot-corners-changed', () => this._updateHotEdge(), this);
+        this._settings = this.getSettings();
+        this._settings?.connectObject('changed', () => this._restart(), this);
+
+        this._dock = new BottomDock(this._settings);
     }
 
     _restart() {
@@ -257,9 +260,6 @@ export default class DockExpressExtension extends Extension {
     }
 
     enable() {
-        this._settings = this.getSettings();
-        this._settings?.connectObject('changed', () => this._restart(), this);
-
         if (Main.layoutManager._startingUp)
             Main.layoutManager.connectObject('startup-complete', () => this._initDock(), this);
         else
@@ -271,11 +271,6 @@ export default class DockExpressExtension extends Extension {
         this._settings = null;
 
         Main.layoutManager.disconnectObject(this);
-
-        if (this._timeout) {
-            GLib.Source.remove(this._timeout);
-            this._timeout = null;
-        }
 
         this._dock?.destroy();
         this._dock = null;
