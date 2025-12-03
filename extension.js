@@ -237,16 +237,16 @@ const BottomDock = GObject.registerClass(
         }
 
         destroy() {
+            if (this._timeout) {
+                GLib.Source.remove(this._timeout);
+                this._timeout = null;
+            }
+
             Main.overview.disconnectObject(this);
             Main.layoutManager.disconnectObject(this);
 
             this._destroyPressureBarrier();
             this._restoreDash();
-
-            if (this._timeout) {
-                GLib.Source.remove(this._timeout);
-                this._timeout = null;
-            }
 
             super.destroy();
         }
