@@ -35,6 +35,7 @@ const BottomDock = GObject.registerClass(
 
             Main.overview.connectObject(
                 'showing', () => this._onOverviewShowing(),
+                'hiding', () => this._onOverviewHiding(),
                 'hidden', () => this._onOverviewHidden(),
                 this);
         }
@@ -170,6 +171,7 @@ const BottomDock = GObject.registerClass(
         }
 
         _dimDash() {
+            this._dash.show();
             this._dash.ease({
                 duration: this._animationDuration * 4,
                 opacity: this._dimmedOpacity,
@@ -183,29 +185,26 @@ const BottomDock = GObject.registerClass(
 
             if (!this._dash.visible)
                 this._raiseDash();
-            else {
-                if (!this._settings?.get_boolean('dock-autohide') && !Main.overview.visible)
-                    this._hideDash();
-            }
+            else if (!this._settings?.get_boolean('dock-autohide'))
+                this._hideDash();
         }
 
         _onOverviewShowing() {
             this._hideDash();
         }
 
+        _onOverviewHiding() {
+            this._hideDash();
+        }
+
         _onOverviewHidden() {
-            if (!this._dash._dashContainer.hover) {
-                if (this._settings?.get_boolean('dock-autohide'))
-                    this._hideDash()
-                else
-                    this._dimDash();
-            }
+            if (this._settings?.get_boolean('dock-autohide'))
+                this._dash.hide();
+            else
+                this._dimDash();
         }
 
         _onDashHover() {
-            if (Main.overview.visible)
-                return;
-
             if (this._settings?.get_boolean('dock-autohide')) {
                 if (!this._dash._dashContainer.hover && !this._keepDashShown)
                     this._hideDash();
