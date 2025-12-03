@@ -76,14 +76,10 @@ const BottomDock = GObject.registerClass(
         }
 
         _setHotEdge() {
-            Main.overview.show();
-
             if (this._timeout)
                 GLib.Source.remove(this._timeout);
 
-            this._timeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                Main.overview.hide();
-
+            this._timeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
                 this._setMonitor();
                 this._setBarrier();
                 this._setDashPosition();
