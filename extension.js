@@ -20,7 +20,7 @@ const HOT_EDGE_PRESSURE_TIMEOUT = 500; // ms
 
 const BottomDock = GObject.registerClass(
     class BottomDock extends Clutter.Actor {
-        _init(settings, monitor) {
+        _init(settings) {
             super._init();
 
             this._settings = settings;
@@ -31,10 +31,10 @@ const BottomDock = GObject.registerClass(
             this._initPressureBarrier();
             this._setHotEdge();
 
-            Main.layoutManager.connectObject('hot-corners-changed', () => this._setHotEdge(), this);
+            Main.layoutManager.connectObject('monitors-changed', () => this._setHotEdge(), GObject.ConnectFlags.AFTER, this);
 
             Main.overview.connectObject(
-                'showing', () => this._raiseDash(),
+                'showing', () => this._onOverviewShowing(),
                 'hidden', () => this._onOverviewHidden(),
                 this);
         }
@@ -48,22 +48,26 @@ const BottomDock = GObject.registerClass(
             this._pressureBarrier.connectObject('trigger', () => this._toggleDash(), this);
         }
 
-        _setBarrier() {
+        _setMonitor() {
             this._monitor = Main.layoutManager.primaryMonitor;
             if (!this._monitor)
                 return;
 
+            this._w = this._monitor.width;
+            this._h = this._monitor.height;
             this._x = this._monitor.x;
-            this._y = this._monitor.y + this._monitor.height;
+            this._y = this._monitor.y;
+        }
 
+        _setBarrier() {
             this._destroyBarrier();
 
             this._barrier = new Meta.Barrier({
                 backend: global.backend,
                 x1: this._x,
-                y1: this._y,
-                x2: this._x + this._monitor.width,
-                y2: this._y,
+                y1: this._y + this._h,
+                x2: this._x + this._w,
+                y2: this._y + this._h,
                 directions: Meta.BarrierDirection.NEGATIVE_Y
             });
 
@@ -79,7 +83,9 @@ const BottomDock = GObject.registerClass(
             this._timeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 Main.overview.hide();
 
+                this._setMonitor();
                 this._setBarrier();
+                this._setDashPosition();
                 this._raiseDash();
 
                 this._timeout = null;
@@ -139,14 +145,13 @@ const BottomDock = GObject.registerClass(
             }
         }
 
-        _raiseDash() {
-            const workArea = Main.layoutManager.getWorkAreaForMonitor(Main.layoutManager.primaryIndex);
-            if (workArea) {
-                const x = Math.round(workArea.x + (workArea.width - this._dash.width) / 2);
-                const y = Math.round(workArea.y + workArea.height - this._dash.height);
-                this._dash.set_position(x, y);
-            }
+        _setDashPosition() {
+            const x = Math.round(this._x + (this._w - this._dash._dashContainer.width) / 2);
+            const y = Math.round(this._y + this._h - this._dash._dashContainer.height);
+            this._dash.set_position(x, y);
+        }
 
+        _raiseDash() {
             this._dash.show();
             this._dash.ease({
                 duration: this._animationDuration,
@@ -184,11 +189,15 @@ const BottomDock = GObject.registerClass(
             }
         }
 
+        _onOverviewShowing() {
+            this._hideDash();
+        }
+
         _onOverviewHidden() {
-            if (this._settings?.get_boolean('dock-autohide'))
-                this._hideDash();
-            else {
-                if (!this._dash._dashContainer.hover)
+            if (!this._dash._dashContainer.hover) {
+                if (this._settings?.get_boolean('dock-autohide'))
+                    this._hideDash()
+                else
                     this._dimDash();
             }
         }
@@ -234,9 +243,15 @@ const BottomDock = GObject.registerClass(
 
         destroy() {
             Main.overview.disconnectObject(this);
+            Main.layoutManager.disconnectObject(this);
 
             this._destroyPressureBarrier();
             this._restoreDash();
+
+            if (this._timeout) {
+                GLib.Source.remove(this._timeout);
+                this._timeout = null;
+            }
 
             super.destroy();
         }

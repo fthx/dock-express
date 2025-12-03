@@ -33,7 +33,7 @@ export default class DockExpressPreferences extends ExtensionPreferences {
         });
 
         const pressureTreshold = new Adw.SpinRow({
-            title: 'Pressure treshold to trigger the dock',
+            title: 'Pressure treshold to trigger the dock (px)',
             subtitle: 'Default value: 100.',
             adjustment: adjustmentPressure,
         });
