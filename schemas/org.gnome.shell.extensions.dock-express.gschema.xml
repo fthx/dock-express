@@ -8,13 +8,13 @@
         <summary>Autohide the dock</summary>
     </key>
 
-    <key type="i" name="pressure-treshold">
+    <key type="i" name="pressure-threshold">
         <default>100</default>
-        <summary>Pressure treshold</summary>
+        <summary>Pressure threshold</summary>
     </key>
 
     <key type="i" name="animation-duration">
-        <default>150</default>
+        <default>200</default>
         <summary>Animation duration</summary>
     </key>
 

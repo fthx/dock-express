@@ -24,8 +24,8 @@ const BottomDock = GObject.registerClass(
             super._init();
 
             this._settings = settings;
-            this._animationDuration = this._settings?.get_int('animation-duration');
-            this._dimmedOpacity = Math.round(this._settings?.get_int('dimmed-opacity') / 100 * 255);
+            this._animationDuration = this._settings?.get_int('animation-duration') ?? 200;
+            this._dimmedOpacity = Math.round(this._settings?.get_int('dimmed-opacity') ?? 50 / 100 * 255);
 
             this._initDash();
             this._initPressureBarrier();
@@ -34,15 +34,14 @@ const BottomDock = GObject.registerClass(
             Main.layoutManager.connectObject('monitors-changed', () => this._setHotEdge(), GObject.ConnectFlags.AFTER, this);
 
             Main.overview.connectObject(
-                'showing', () => this._onOverviewShowing(),
-                'hiding', () => this._onOverviewHiding(),
+                'shown', () => this._onOverviewShown(),
                 'hidden', () => this._onOverviewHidden(),
                 this);
         }
 
         _initPressureBarrier() {
             this._pressureBarrier = new Layout.PressureBarrier(
-                this._settings?.get_int('pressure-treshold'),
+                this._settings?.get_int('pressure-threshold') ?? 100,
                 HOT_EDGE_PRESSURE_TIMEOUT,
                 Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW);
 
@@ -76,6 +75,8 @@ const BottomDock = GObject.registerClass(
         }
 
         _setHotEdge() {
+            Main.layoutManager._queueUpdateRegions();
+
             if (this._timeout)
                 GLib.Source.remove(this._timeout);
 
@@ -83,7 +84,6 @@ const BottomDock = GObject.registerClass(
                 this._setMonitor();
                 this._setBarrier();
                 this._setDashPosition();
-                this._raiseDash();
 
                 this._timeout = null;
                 return GLib.SOURCE_REMOVE;
@@ -149,6 +149,8 @@ const BottomDock = GObject.registerClass(
         }
 
         _raiseDash() {
+            this._dash.remove_all_transitions();
+
             this._dash.show();
             this._dash.ease({
                 duration: this._animationDuration,
@@ -158,6 +160,8 @@ const BottomDock = GObject.registerClass(
         }
 
         _hideDash() {
+            this._dash.remove_all_transitions();
+
             this._dash.ease({
                 duration: this._animationDuration,
                 opacity: 0,
@@ -167,6 +171,8 @@ const BottomDock = GObject.registerClass(
         }
 
         _dimDash() {
+            this._dash.remove_all_transitions();
+
             this._dash.show();
             this._dash.ease({
                 duration: this._animationDuration * 4,
@@ -176,7 +182,9 @@ const BottomDock = GObject.registerClass(
         }
 
         _toggleDash() {
-            if (this._monitor?.inFullscreen || (global.get_pointer()[2] & Clutter.ModifierType.BUTTON1_MASK))
+            if (this._monitor?.inFullscreen
+                || (global.get_pointer()[2] & Clutter.ModifierType.BUTTON1_MASK)
+                || Main.overview.visible)
                 return;
 
             if (!this._dash.visible)
@@ -185,17 +193,13 @@ const BottomDock = GObject.registerClass(
                 this._hideDash();
         }
 
-        _onOverviewShowing() {
-            this._hideDash();
-        }
-
-        _onOverviewHiding() {
-            this._hideDash();
+        _onOverviewShown() {
+            this._raiseDash();
         }
 
         _onOverviewHidden() {
             if (this._settings?.get_boolean('dock-autohide'))
-                this._dash.hide();
+                this._hideDash();
             else
                 this._dimDash();
         }
@@ -214,6 +218,7 @@ const BottomDock = GObject.registerClass(
 
         _restoreDash() {
             if (this._dash) {
+                this._dash.remove_all_transitions();
                 this._dash.show();
                 this._dash.opacity = 255;
 

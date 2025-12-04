@@ -32,13 +32,13 @@ export default class DockExpressPreferences extends ExtensionPreferences {
             step_increment: 10,
         });
 
-        const pressureTreshold = new Adw.SpinRow({
-            title: 'Pressure treshold to trigger the dock (px)',
+        const pressureThreshold = new Adw.SpinRow({
+            title: 'Pressure threshold to trigger the dock (px)',
             subtitle: 'Default value: 100.',
             adjustment: adjustmentPressure,
         });
-        groupGlobal.add(pressureTreshold);
-        window._settings.bind('pressure-treshold', pressureTreshold, 'value', Gio.SettingsBindFlags.DEFAULT);
+        groupGlobal.add(pressureThreshold);
+        window._settings.bind('pressure-threshold', pressureThreshold, 'value', Gio.SettingsBindFlags.DEFAULT);
 
         const adjustmentAnimation = new Gtk.Adjustment({
             lower: 0,
