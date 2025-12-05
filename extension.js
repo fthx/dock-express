@@ -25,7 +25,7 @@ const BottomDock = GObject.registerClass(
 
             this._settings = settings;
             this._animationDuration = this._settings?.get_int('animation-duration') ?? 200;
-            this._dimmedOpacity = Math.round(this._settings?.get_int('dimmed-opacity') ?? 50 / 100 * 255);
+            this._dimmedOpacity = (Math.round(this._settings?.get_int('dimmed-opacity') ?? 50) / 100 * 255);
 
             this._initDash();
             this._initPressureBarrier();
@@ -75,6 +75,8 @@ const BottomDock = GObject.registerClass(
         }
 
         _setHotEdge() {
+            this._dash.opacity = 0;
+
             Main.layoutManager._queueUpdateRegions();
 
             if (this._timeout)
@@ -84,6 +86,8 @@ const BottomDock = GObject.registerClass(
                 this._setMonitor();
                 this._setBarrier();
                 this._setDashPosition();
+
+                this._dash.opacity = 255;
 
                 this._timeout = null;
                 return GLib.SOURCE_REMOVE;
