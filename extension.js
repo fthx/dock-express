@@ -207,6 +207,8 @@ const BottomDock = GObject.registerClass(
                 this._hideDash();
             else
                 this._dimDash();
+
+            this._setDashPosition();
         }
 
         _onDashHover() {
