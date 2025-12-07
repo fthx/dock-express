@@ -257,8 +257,10 @@ const BottomDock = GObject.registerClass(
                 this._timeout = null;
             }
 
+            this._dash.remove_all_transitions();
             Main.overview.disconnectObject(this);
             Main.layoutManager.disconnectObject(this);
+
 
             this._destroyPressureBarrier();
             this._restoreDash();
