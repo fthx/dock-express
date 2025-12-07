@@ -247,9 +247,9 @@ const BottomDock = GObject.registerClass(
             }
         }
 
-        vfunc_leave_event(event) {
+        /*vfunc_leave_event(event) {
             return Clutter.EVENT_PROPAGATE;
-        }
+        }*/
 
         destroy() {
             if (this._timeout) {
