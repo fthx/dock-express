@@ -79,10 +79,10 @@ const BottomDock = GObject.registerClass(
 
             Main.layoutManager._queueUpdateRegions();
 
-            if (this._timeout)
-                GLib.Source.remove(this._timeout);
+            if (this._hotEdgeTimeout)
+                GLib.Source.remove(this._hotEdgeTimeout);
 
-            this._timeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+            this._hotEdgeTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
                 this._setMonitor();
                 this._setBarrier();
                 this._setDashPosition();
@@ -90,7 +90,7 @@ const BottomDock = GObject.registerClass(
                 this._dash.opacity = 255;
                 Main.overview.show();
 
-                this._timeout = null;
+                this._hotEdgeTimeout = null;
                 return GLib.SOURCE_REMOVE;
             });
         }
@@ -199,7 +199,15 @@ const BottomDock = GObject.registerClass(
         }
 
         _onOverviewShown() {
-            this._raiseDash();
+            if (this._overviewTimeout)
+                GLib.Source.remove(this._overviewTimeout);
+
+            this._overviewTimeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._raiseDash();
+
+                this._overviewTimeout = null;
+                return GLib.SOURCE_REMOVE;
+            });
         }
 
         _onOverviewHidden() {
@@ -207,8 +215,6 @@ const BottomDock = GObject.registerClass(
                 this._hideDash();
             else
                 this._dimDash();
-
-            this._setDashPosition();
         }
 
         _onDashHover() {
@@ -248,9 +254,14 @@ const BottomDock = GObject.registerClass(
         }
 
         destroy() {
-            if (this._timeout) {
-                GLib.Source.remove(this._timeout);
-                this._timeout = null;
+            if (this._hotEdgeimeout) {
+                GLib.Source.remove(this._hotEdgeTimeout);
+                this._hotEdgeTimeout = null;
+            }
+
+            if (this._overviewTimeout) {
+                GLib.Source.remove(this._overviewTimeout);
+                this._overviewTimeout = null;
             }
 
             this._dash.remove_all_transitions();
