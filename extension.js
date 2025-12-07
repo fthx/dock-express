@@ -218,7 +218,7 @@ const BottomDock = GObject.registerClass(
         }
 
         _onDashHover() {
-            if (Main.overview.visible)
+            if (Main.overview.visible || !this._dash.visible)
                 return;
 
             if (this._settings?.get_boolean('dock-autohide')) {
