@@ -34,8 +34,8 @@ const BottomDock = GObject.registerClass(
             Main.layoutManager.connectObject('monitors-changed', () => this._setHotEdge(), GObject.ConnectFlags.AFTER, this);
 
             Main.overview.connectObject(
-                'shown', () => this._onOverviewShown(),
-                'hidden', () => this._onOverviewHidden(),
+                'shown', () => this._onOverviewShown(), GObject.ConnectFlags.AFTER,
+                'hidden', () => this._onOverviewHidden(), GObject.ConnectFlags.AFTER,
                 this);
         }
 
@@ -88,6 +88,7 @@ const BottomDock = GObject.registerClass(
                 this._setDashPosition();
 
                 this._dash.opacity = 255;
+                Main.overview.show();
 
                 this._timeout = null;
                 return GLib.SOURCE_REMOVE;
