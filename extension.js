@@ -88,6 +88,7 @@ const BottomDock = GObject.registerClass(
                 this._setDashPosition();
 
                 this._dash.opacity = 255;
+                this._dashWasShown = true;
                 Main.overview.show();
 
                 this._hotEdgeTimeout = null;
@@ -171,7 +172,10 @@ const BottomDock = GObject.registerClass(
                 duration: this._animationDuration,
                 opacity: 0,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                onComplete: () => this._dash.hide(),
+                onComplete: () => {
+                    this._dash.hide();
+                    this._dashWasShown = false;
+                },
             });
         }
 
@@ -192,9 +196,10 @@ const BottomDock = GObject.registerClass(
                 || Main.overview.visible)
                 return;
 
-            if (!this._dash.visible)
+            if (!this._dash.visible) {
+                this._dashWasShown = true;
                 this._raiseDash();
-            else if (!this._settings?.get_boolean('dock-autohide'))
+            } else if (!this._settings?.get_boolean('dock-autohide'))
                 this._hideDash();
         }
 
@@ -211,7 +216,7 @@ const BottomDock = GObject.registerClass(
         }
 
         _onOverviewHidden() {
-            if (this._settings?.get_boolean('dock-autohide'))
+            if (this._settings?.get_boolean('dock-autohide') || !this._dashWasShown)
                 this._hideDash();
             else
                 this._dimDash();
