@@ -137,6 +137,7 @@ const BottomDock = GObject.registerClass(
 
             this._dash._dashContainer.track_hover = true;
             this._dash._dashContainer.reactive = true;
+            this._dash.set_pivot_point(0.5, 1.0);
 
             this._dash.showAppsButton.connectObject('notify::checked', () => Main.overview.showApps(), this);
 
@@ -160,6 +161,7 @@ const BottomDock = GObject.registerClass(
             this._dash.show();
             this._dash.ease({
                 duration: this._animationDuration,
+                scale_y: 1,
                 opacity: 255,
                 mode: Clutter.AnimationMode.EASE_IN_QUAD,
             });
@@ -170,6 +172,7 @@ const BottomDock = GObject.registerClass(
 
             this._dash.ease({
                 duration: this._animationDuration,
+                scale_y: 0,
                 opacity: 0,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                 onComplete: () => {
@@ -248,6 +251,7 @@ const BottomDock = GObject.registerClass(
 
                 this._dash._dashContainer.reactive = false;
                 this._dash._dashContainer.track_hover = false;
+                this._dash.set_pivot_point(0.0, 0.0);
 
                 this._dash._itemMenuStateChanged = this._originalItemMenuChanged;
 
@@ -272,7 +276,6 @@ const BottomDock = GObject.registerClass(
             this._dash.remove_all_transitions();
             Main.overview.disconnectObject(this);
             Main.layoutManager.disconnectObject(this);
-
 
             this._destroyPressureBarrier();
             this._restoreDash();
