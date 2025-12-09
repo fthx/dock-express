@@ -211,15 +211,7 @@ const BottomDock = GObject.registerClass(
         }
 
         _onOverviewShown() {
-            if (this._overviewTimeout)
-                GLib.Source.remove(this._overviewTimeout);
-
-            this._overviewTimeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._raiseDash();
-
-                this._overviewTimeout = null;
-                return GLib.SOURCE_REMOVE;
-            });
+            this._raiseDash();
         }
 
         _onOverviewHidden() {
@@ -277,11 +269,6 @@ const BottomDock = GObject.registerClass(
             if (this._hotEdgeimeout) {
                 GLib.Source.remove(this._hotEdgeTimeout);
                 this._hotEdgeTimeout = null;
-            }
-
-            if (this._overviewTimeout) {
-                GLib.Source.remove(this._overviewTimeout);
-                this._overviewTimeout = null;
             }
 
             this._dash.remove_all_transitions();
