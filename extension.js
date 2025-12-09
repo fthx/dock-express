@@ -34,8 +34,8 @@ const BottomDock = GObject.registerClass(
             Main.layoutManager.connectObject('monitors-changed', () => this._setHotEdge(), GObject.ConnectFlags.AFTER, this);
 
             Main.overview.connectObject(
-                'shown', () => this._onOverviewShown(), GObject.ConnectFlags.AFTER,
-                'hidden', () => this._onOverviewHidden(), GObject.ConnectFlags.AFTER,
+                'showing', () => this._onOverviewShowing(), GObject.ConnectFlags.AFTER,
+                'hiding', () => this._onOverviewHiding(), GObject.ConnectFlags.AFTER,
                 this);
         }
 
@@ -66,7 +66,7 @@ const BottomDock = GObject.registerClass(
             this._dash._dashContainer.reactive = true;
             this._dash.set_pivot_point(0.5, 1.0);
 
-            this._dash.showAppsButton.connectObject('notify::checked', () => this._onShowAppsButtonToggled(), this);
+            this._dash.showAppsButton.connectObject('notify::checked', () => this._onShowAppsButtonClicked(), this);
 
             if (Main.overview._overview._controls.get_children().includes(this._dash)) {
                 Main.overview._overview._controls.remove_child(this._dash);
@@ -210,11 +210,11 @@ const BottomDock = GObject.registerClass(
                 this._hideDash();
         }
 
-        _onOverviewShown() {
+        _onOverviewShowing() {
             this._raiseDash();
         }
 
-        _onOverviewHidden() {
+        _onOverviewHiding() {
             if (this._settings?.get_boolean('dock-autohide') || !this._dashWasShown)
                 this._hideDash();
             else
@@ -236,7 +236,7 @@ const BottomDock = GObject.registerClass(
             }
         }
 
-        _onShowAppsButtonToggled() {
+        _onShowAppsButtonClicked() {
             if (Main.overview.visible)
                 Main.overview._overview._controls._onShowAppsButtonToggled();
             else
@@ -266,7 +266,7 @@ const BottomDock = GObject.registerClass(
         }
 
         destroy() {
-            if (this._hotEdgeimeout) {
+            if (this._hotEdgeTimeout) {
                 GLib.Source.remove(this._hotEdgeTimeout);
                 this._hotEdgeTimeout = null;
             }
