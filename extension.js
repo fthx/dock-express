@@ -138,6 +138,8 @@ const BottomDock = GObject.registerClass(
                 this._dash.opacity = 255;
                 this._dashWasShown = true;
 
+                Main.overview.show();
+
                 this._hotEdgeTimeout = null;
                 return GLib.SOURCE_REMOVE;
             });
