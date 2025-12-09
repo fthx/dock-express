@@ -43,7 +43,7 @@ export default class DockExpressPreferences extends ExtensionPreferences {
         const adjustmentAnimation = new Gtk.Adjustment({
             lower: 0,
             upper: 500,
-            step_increment: 50,
+            step_increment: 10,
         });
 
         const animationDuration = new Adw.SpinRow({
