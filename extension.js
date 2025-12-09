@@ -60,6 +60,9 @@ const BottomDock = GObject.registerClass(
         }
 
         _setBarrier() {
+            if (!this._pressureBarrier)
+                return;
+
             this._destroyBarrier();
 
             this._barrier = new Meta.Barrier({
@@ -71,7 +74,7 @@ const BottomDock = GObject.registerClass(
                 directions: Meta.BarrierDirection.NEGATIVE_Y
             });
 
-            this._pressureBarrier.addBarrier(this._barrier);
+            this._pressureBarrier?.addBarrier(this._barrier);
         }
 
         _setHotEdge() {
