@@ -39,82 +39,6 @@ const BottomDock = GObject.registerClass(
                 this);
         }
 
-        _initPressureBarrier() {
-            this._pressureBarrier = new Layout.PressureBarrier(
-                this._settings?.get_int('pressure-threshold') ?? 100,
-                HOT_EDGE_PRESSURE_TIMEOUT,
-                Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW);
-
-            this._pressureBarrier.connectObject('trigger', () => this._toggleDash(), this);
-        }
-
-        _setMonitor() {
-            this._monitor = Main.layoutManager.primaryMonitor;
-            if (!this._monitor)
-                return;
-
-            this._w = this._monitor.width;
-            this._h = this._monitor.height;
-            this._x = this._monitor.x;
-            this._y = this._monitor.y;
-        }
-
-        _setBarrier() {
-            if (!this._pressureBarrier)
-                return;
-
-            this._destroyBarrier();
-
-            this._barrier = new Meta.Barrier({
-                backend: global.backend,
-                x1: this._x,
-                y1: this._y + this._h,
-                x2: this._x + this._w,
-                y2: this._y + this._h,
-                directions: Meta.BarrierDirection.NEGATIVE_Y
-            });
-
-            this._pressureBarrier?.addBarrier(this._barrier);
-        }
-
-        _setHotEdge() {
-            this._dash.opacity = 0;
-
-            Main.layoutManager._queueUpdateRegions();
-
-            if (this._hotEdgeTimeout)
-                GLib.Source.remove(this._hotEdgeTimeout);
-
-            this._hotEdgeTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                this._setMonitor();
-                this._setBarrier();
-                this._setDashPosition();
-
-                this._dash.opacity = 255;
-                this._dashWasShown = true;
-                Main.overview.show();
-
-                this._hotEdgeTimeout = null;
-                return GLib.SOURCE_REMOVE;
-            });
-        }
-
-        _destroyBarrier() {
-            if (this._barrier) {
-                this._pressureBarrier?.removeBarrier(this._barrier);
-                this._barrier.destroy();
-                this._barrier = null;
-            }
-        }
-
-        _destroyPressureBarrier() {
-            this._destroyBarrier();
-
-            this._pressureBarrier?.disconnectObject(this);
-            this._pressureBarrier?.destroy();
-            this._pressureBarrier = null;
-        }
-
         _initDash() {
             this._dash = Main.overview.dash;
 
@@ -142,20 +66,97 @@ const BottomDock = GObject.registerClass(
             this._dash._dashContainer.reactive = true;
             this._dash.set_pivot_point(0.5, 1.0);
 
-            this._dash.showAppsButton.connectObject('notify::checked', () => Main.overview.showApps(), this);
+            this._dash.showAppsButton.connectObject('notify::checked', () => this._onShowAppsButtonToggled(), this);
 
             if (Main.overview._overview._controls.get_children().includes(this._dash)) {
                 Main.overview._overview._controls.remove_child(this._dash);
                 Main.layoutManager.addTopChrome(this._dash, {
-                    affectsInputRegion: true, affectsStruts: false, trackFullscreen: false
+                    affectsInputRegion: true, affectsStruts: false, trackFullscreen: false,
                 });
             }
         }
 
+        _initPressureBarrier() {
+            this._pressureBarrier = new Layout.PressureBarrier(
+                this._settings?.get_int('pressure-threshold') ?? 100,
+                HOT_EDGE_PRESSURE_TIMEOUT,
+                Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW);
+
+            this._pressureBarrier.connectObject('trigger', () => this._toggleDash(), this);
+        }
+
+        _setMonitor() {
+            this._monitor = Main.layoutManager.primaryMonitor;
+            if (!this._monitor)
+                return;
+
+            this._w = this._monitor.width;
+            this._h = this._monitor.height;
+            this._x = this._monitor.x;
+            this._y = this._monitor.y;
+        }
+
         _setDashPosition() {
-            const x = Math.round(this._x + (this._w - this._dash._dashContainer.width) / 2);
-            const y = Math.round(this._y + this._h - this._dash._dashContainer.height);
+            if (!this._monitor)
+                return;
+
+            const x = Math.round(this._x + (this._w - this._dash.width) / 2);
+            const y = Math.round(this._y + this._h - this._dash.height);
             this._dash.set_position(x, y);
+        }
+
+        _setBarrier() {
+            if (!this._pressureBarrier)
+                return;
+
+            this._destroyBarrier();
+
+            this._barrier = new Meta.Barrier({
+                backend: global.backend,
+                x1: this._x,
+                y1: this._y + this._h,
+                x2: this._x + this._w,
+                y2: this._y + this._h,
+                directions: Meta.BarrierDirection.NEGATIVE_Y
+            });
+
+            this._pressureBarrier.addBarrier(this._barrier);
+        }
+
+        _setHotEdge() {
+            this._dash.remove_all_transitions();
+            this._dash.opacity = 0;
+
+            if (this._hotEdgeTimeout)
+                GLib.Source.remove(this._hotEdgeTimeout);
+
+            this._hotEdgeTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                this._setMonitor();
+                this._setDashPosition();
+                this._setBarrier();
+
+                this._dash.opacity = 255;
+                this._dashWasShown = true;
+
+                this._hotEdgeTimeout = null;
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+
+        _destroyBarrier() {
+            if (this._barrier) {
+                this._pressureBarrier?.removeBarrier(this._barrier);
+                this._barrier.destroy();
+                this._barrier = null;
+            }
+        }
+
+        _destroyPressureBarrier() {
+            this._destroyBarrier();
+
+            this._pressureBarrier?.disconnectObject(this);
+            this._pressureBarrier?.destroy();
+            this._pressureBarrier = null;
         }
 
         _raiseDash() {
@@ -241,6 +242,13 @@ const BottomDock = GObject.registerClass(
                 else
                     this._dimDash();
             }
+        }
+
+        _onShowAppsButtonToggled() {
+            if (Main.overview.visible)
+                Main.overview._overview._controls._onShowAppsButtonToggled();
+            else
+                Main.overview.showApps();
         }
 
         _restoreDash() {
