@@ -66,6 +66,7 @@ const BottomDock = GObject.registerClass(
             this._dash._dashContainer.reactive = true;
             this._dash.set_pivot_point(0.5, 1.0);
 
+            this._dash.connectObject('notify::width', () => this._onWidthChanged(), this);
             this._dash.showAppsButton.connectObject('notify::checked', () => this._onShowAppsButtonClicked(), this);
 
             if (Main.overview._overview._controls.get_children().includes(this._dash)) {
@@ -130,14 +131,14 @@ const BottomDock = GObject.registerClass(
             if (this._hotEdgeTimeout)
                 GLib.Source.remove(this._hotEdgeTimeout);
 
-            this._hotEdgeTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                this._setMonitor();
-                this._setDashPosition();
-                this._setBarrier();
-
+            this._hotEdgeTimeout = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                 this._dash.setMaxSize(-1, -1);
                 this._dash.opacity = 255;
                 this._dashWasShown = true;
+
+                this._setMonitor();
+                this._setDashPosition();
+                this._setBarrier();
 
                 Main.overview.show();
 
@@ -246,12 +247,25 @@ const BottomDock = GObject.registerClass(
                 Main.overview.showApps();
         }
 
+        _onWidthChanged() {
+            if (this._widthTimeout)
+                GLib.Source.remove(this._widthTimeout);
+
+            this._widthTimeout = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                this._setDashPosition();
+
+                this._widthTimeout = null;
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+
         _restoreDash() {
             if (this._dash) {
                 this._dash.remove_all_transitions();
                 this._dash.show();
                 this._dash.opacity = 255;
 
+                this._dash.disconnectObject(this);
                 this._dash._dashContainer.disconnectObject(this);
                 this._dash.showAppsButton.disconnectObject(this);
 
@@ -274,7 +288,11 @@ const BottomDock = GObject.registerClass(
                 this._hotEdgeTimeout = null;
             }
 
-            this._dash.remove_all_transitions();
+            if (this._widthTimeout) {
+                GLib.Source.remove(this._widthTimeout);
+                this._widthTimeout = null;
+            }
+
             Main.overview.disconnectObject(this);
             Main.layoutManager.disconnectObject(this);
 
