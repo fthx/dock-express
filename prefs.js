@@ -28,7 +28,7 @@ export default class DockExpressPreferences extends ExtensionPreferences {
 
         const adjustmentPressure = new Gtk.Adjustment({
             lower: 0,
-            upper: 200,
+            upper: 500,
             step_increment: 10,
         });
 
