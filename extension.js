@@ -135,6 +135,7 @@ const BottomDock = GObject.registerClass(
                 this._setDashPosition();
                 this._setBarrier();
 
+                this._dash.setMaxSize(-1, -1);
                 this._dash.opacity = 255;
                 this._dashWasShown = true;
 
